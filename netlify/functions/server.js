@@ -17,8 +17,9 @@ exports.handler = async (event, context) => {
   let cleanPath = path.replace('/.netlify/functions/server', '');
   if (!cleanPath.startsWith('/')) cleanPath = '/' + cleanPath;
 
-  const authHandler = require('./auth.js');
-  const progressHandler = require('./progress.js');
+  const authHandler = require('./auth');
+  const progressHandler = require('./progress');
+
 
 
   if (cleanPath.startsWith('/api/auth')) {
