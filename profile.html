@@ -158,7 +158,7 @@
       try {
         console.log('🔄 Syncing data from backend...');
         
-        const response = await fetch('/api/auth/profile', {
+        const response = await fetch('/api/auth/me', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -169,8 +169,8 @@
         if (response.ok) {
           const result = await response.json();
           
-          if (result.success && result.data) {
-            const user = result.data;
+          if (result.success && result.data && result.data.user) {
+            const user = result.data.user;
             
             // Update localStorage dengan data terbaru dari backend
             if (user.progress) {

@@ -53,6 +53,19 @@
           updateHomePage();
         };
       }
+      
+      // NEW: Listen for profile updates
+      window.addEventListener('profileUpdated', function(event) {
+        console.log('Profile updated event received on index.html');
+        if (event.detail && event.detail.user) {
+          // Update authManager user
+          if (typeof authManager !== 'undefined') {
+            authManager.user = event.detail.user;
+          }
+          // Update UI
+          updateHomePage();
+        }
+      });
     });
   </script>
 </head>
