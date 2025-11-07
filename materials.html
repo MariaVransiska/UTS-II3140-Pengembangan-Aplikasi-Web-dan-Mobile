@@ -9,6 +9,7 @@
   <link rel="icon" type="image/png" href="png/icon salib.png" />
   <link rel="stylesheet" href="style.css" />
   <script src="js/auth.js"></script>
+  <script src="js/progress.js"></script>
   <script src="js/page-protection.js"></script>
 </head>
 <body>
@@ -82,5 +83,28 @@
       <p class="muted">© 2025 Virtual Lab Agama Kristen</p>
     </div>
   </footer>
+  
+  <!-- Track Material Views -->
+  <script>
+    // Wait for progressManager to be available
+    window.addEventListener('DOMContentLoaded', function() {
+      // Track material views when details are opened
+      document.querySelectorAll('details').forEach((details, index) => {
+        details.addEventListener('toggle', function() {
+          if (this.open) {
+            const materialId = `pertemuan-${index + 1}`;
+            const summaryElement = this.querySelector('summary');
+            const title = summaryElement ? summaryElement.textContent.trim() : `Pertemuan ${index + 1}`;
+            
+            // Track via progressManager
+            if (window.progressManager) {
+              window.progressManager.trackMaterialView(materialId, title);
+              console.log(`✅ Tracked material: ${title}`);
+            }
+          }
+        });
+      });
+    });
+  </script>
 </body>
 </html>

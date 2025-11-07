@@ -9,6 +9,7 @@
   <link rel="icon" type="image/png" href="png/icon salib.png" />
   <link rel="stylesheet" href="style.css" />
   <script src="js/auth.js"></script>
+  <script src="js/progress.js"></script>
   <script src="js/page-protection.js"></script>
 </head>
 <body>
@@ -45,5 +46,47 @@
       <p class="muted">© 2025 Virtual Lab Agama Kristen</p>
     </div>
   </footer>
+  
+  <!-- Track Video Views -->
+  <script>
+    // Wait for progressManager to be available
+    window.addEventListener('DOMContentLoaded', function() {
+      // Track video views when iframe loads
+      const videoContainers = document.querySelectorAll('.video-layout');
+      
+      videoContainers.forEach((container, index) => {
+        const iframe = container.querySelector('iframe');
+        const title = container.querySelector('h3')?.textContent.trim() || `Video ${index + 1}`;
+        const videoId = `video-${index + 1}`;
+        
+        if (iframe) {
+          // Track when iframe loads (user starts watching)
+          iframe.addEventListener('load', function() {
+            if (window.progressManager) {
+              window.progressManager.trackVideoWatch(videoId, title);
+              console.log(`✅ Tracked video: ${title}`);
+            }
+          });
+          
+          // Alternative: Track when container is in viewport
+          const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+              if (entry.isIntersecting) {
+                setTimeout(() => {
+                  if (window.progressManager) {
+                    window.progressManager.trackVideoWatch(videoId, title);
+                    console.log(`✅ Tracked video view: ${title}`);
+                  }
+                  observer.unobserve(entry.target);
+                }, 2000); // Track after 2 seconds of viewing
+              }
+            });
+          }, { threshold: 0.5 });
+          
+          observer.observe(container);
+        }
+      });
+    });
+  </script>
 </body>
 </html>

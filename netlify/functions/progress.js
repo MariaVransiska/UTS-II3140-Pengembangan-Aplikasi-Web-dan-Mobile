@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
-const { connectDB } = require('./db');
+const { connectToDatabase, getDbType } = require('./db');
 const { getUserModel } = require('./models/user');
-const { updateProgressArray, updateStatistics, updateArrayItem, deleteArrayItem } = require('./helpers/progress');
+const { updateProgressArray, updateStatistics, updateArrayItem, deleteArrayItem } = require('./db/progress');
 
 const authenticateToken = (event) => {
   const token = event.headers.authorization?.replace('Bearer ', '');
@@ -19,7 +19,8 @@ const authenticateToken = (event) => {
 };
 
 exports.handler = async (event, context) => {
-  await connectDB();
+  // Connect to Supabase
+  const supabase = await connectToDatabase();
   
   const { httpMethod, path, body } = event;
   

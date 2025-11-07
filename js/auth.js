@@ -145,9 +145,31 @@ class AuthManager {
       if (response.success) {
         this.token = response.data.token;
         this.user = response.data.user;
+        
+        // Save auth data
         localStorage.setItem('authToken', this.token);
         localStorage.setItem('userData', JSON.stringify(this.user));
+        
+        // ✅ NEW: Save progress dari backend
+        if (this.user.progress) {
+          localStorage.setItem('userProgress', JSON.stringify(this.user.progress));
+        }
+        
+        // ✅ NEW: Save statistics dari backend
+        if (this.user.statistics) {
+          localStorage.setItem('userStatistics', JSON.stringify(this.user.statistics));
+        }
+        
         this.updateUI();
+        
+        // ✅ NEW: Trigger event untuk refresh progress UI
+        window.dispatchEvent(new CustomEvent('progressLoaded', { 
+          detail: { 
+            progress: this.user.progress,
+            statistics: this.user.statistics
+          }
+        }));
+        
         return response;
       }
     } catch (error) {
@@ -181,10 +203,28 @@ class AuthManager {
 
       localStorage.setItem('authToken', localToken);
       localStorage.setItem('userData', JSON.stringify(user));
+      
+      // ✅ NEW: Save progress untuk local login
+      if (user.progress) {
+        localStorage.setItem('userProgress', JSON.stringify(user.progress));
+      }
+      
+      // ✅ NEW: Save statistics untuk local login
+      if (user.statistics) {
+        localStorage.setItem('userStatistics', JSON.stringify(user.statistics));
+      }
 
       this.token = localToken;
       this.user = user;
       this.updateUI();
+      
+      // ✅ NEW: Trigger event untuk refresh progress UI
+      window.dispatchEvent(new CustomEvent('progressLoaded', { 
+        detail: { 
+          progress: user.progress,
+          statistics: user.statistics
+        }
+      }));
 
       return {
         success: true,

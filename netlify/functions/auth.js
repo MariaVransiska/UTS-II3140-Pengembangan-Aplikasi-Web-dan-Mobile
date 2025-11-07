@@ -1,9 +1,10 @@
 const jwt = require('jsonwebtoken');
-const { connectDB, getConnection } = require('./db');
+const { connectToDatabase } = require('./db');
 const { getUserModel } = require('./models/user');
 
 exports.handler = async (event, context) => {
-  await connectDB();
+  // Connect to Supabase
+  await connectToDatabase();
   
   const { httpMethod, path, body, headers } = event;
   
@@ -173,11 +174,16 @@ async function handleLogin(data) {
   }
   
   const User = await getUserModel();
-  const db = await getConnection();
+  const supabase = await connectToDatabase();
   
   // Get user with password
-  const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-  if (result.rows.length === 0) {
+  const { data: userData, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('email', email)
+    .single();
+  
+  if (error || !userData) {
     return {
       statusCode: 401,
       headers: {
@@ -188,7 +194,7 @@ async function handleLogin(data) {
     };
   }
   
-  const user = User.formatUser(result.rows[0]);
+  const user = User.formatUser(userData);
   const isPasswordValid = await user.comparePassword(password);
   
   if (!isPasswordValid) {
@@ -391,11 +397,16 @@ async function handleChangePassword(data, event) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const User = await getUserModel();
-    const db = await getConnection();
+    const supabase = await connectToDatabase();
     
     // Get user with password
-    const result = await db.query('SELECT * FROM users WHERE id = $1', [decoded.id]);
-    if (result.rows.length === 0) {
+    const { data: userData, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', decoded.id)
+      .single();
+    
+    if (error || !userData) {
       return {
         statusCode: 404,
         headers: {
@@ -406,7 +417,7 @@ async function handleChangePassword(data, event) {
       };
     }
     
-    const user = User.formatUser(result.rows[0]);
+    const user = User.formatUser(userData);
     const isCurrentPasswordValid = await user.comparePassword(currentPassword);
     
     if (!isCurrentPasswordValid) {

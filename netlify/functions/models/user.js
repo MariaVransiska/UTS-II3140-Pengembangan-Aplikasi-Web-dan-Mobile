@@ -1,109 +1,68 @@
 const bcrypt = require('bcryptjs');
 
-// PostgreSQL User Model
+// Supabase User Model
 class UserModel {
-  constructor(db) {
-    this.db = db;
-    this.initTable();
-  }
-
-  async initTable() {
-    const createTableQuery = `
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        password VARCHAR(255) NOT NULL,
-        nim VARCHAR(50) UNIQUE NOT NULL,
-        kelas VARCHAR(50) NOT NULL,
-        gender VARCHAR(20) NOT NULL,
-        progress JSONB DEFAULT '{
-          "quizScores": [],
-          "assignments": [],
-          "journalEntries": [],
-          "materialsViewed": [],
-          "videosWatched": []
-        }'::jsonb,
-        statistics JSONB DEFAULT '{
-          "totalQuizAttempts": 0,
-          "averageQuizScore": 0,
-          "totalStudyTime": 0,
-          "streakDays": 0
-        }'::jsonb,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        last_login TIMESTAMP
-      );
-      
-      CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-      CREATE INDEX IF NOT EXISTS idx_users_nim ON users(nim);
-    `;
-    
-    try {
-      await this.db.query(createTableQuery);
-    } catch (error) {
-      console.error('Error creating users table:', error);
-    }
+  constructor(supabase) {
+    this.supabase = supabase;
   }
 
   async create(userData) {
     const hashedPassword = await bcrypt.hash(userData.password, 12);
     
-    const query = `
-      INSERT INTO users (name, email, password, nim, kelas, gender, progress, statistics)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING *
-    `;
+    const { data, error } = await this.supabase
+      .from('users')
+      .insert([{
+        name: userData.name,
+        email: userData.email,
+        password_hash: hashedPassword,
+        nim: userData.nim,
+        kelas: userData.kelas,
+        gender: userData.gender,
+        progress: {
+          quizScores: [],
+          assignments: [],
+          journalEntries: [],
+          materialsViewed: [],
+          videosWatched: []
+        },
+        statistics: {
+          totalQuizAttempts: 0,
+          averageQuizScore: 0,
+          totalStudyTime: 0,
+          streakDays: 0
+        }
+      }])
+      .select()
+      .single();
     
-    const values = [
-      userData.name,
-      userData.email,
-      hashedPassword,
-      userData.nim,
-      userData.kelas,
-      userData.gender,
-      JSON.stringify({
-        quizScores: [],
-        assignments: [],
-        journalEntries: [],
-        materialsViewed: [],
-        videosWatched: []
-      }),
-      JSON.stringify({
-        totalQuizAttempts: 0,
-        averageQuizScore: 0,
-        totalStudyTime: 0,
-        streakDays: 0
-      })
-    ];
+    if (error) {
+      if (error.code === '23505') { // Unique violation
+        throw new Error('Email atau NIM sudah terdaftar');
+      }
+      throw error;
+    }
     
-    const result = await this.db.query(query, values);
-    return this.formatUser(result.rows[0]);
+    return this.formatUser(data);
   }
 
   async findOne(query) {
-    let whereClause = '';
-    const values = [];
-    let paramIndex = 1;
+    let queryBuilder = this.supabase.from('users').select('*');
 
     if (query.email) {
-      whereClause = `WHERE email = $${paramIndex}`;
-      values.push(query.email);
-      paramIndex++;
+      queryBuilder = queryBuilder.eq('email', query.email);
     } else if (query.nim) {
-      whereClause = `WHERE nim = $${paramIndex}`;
-      values.push(query.nim);
-      paramIndex++;
+      queryBuilder = queryBuilder.eq('nim', query.nim);
     } else if (query._id || query.id) {
-      whereClause = `WHERE id = $${paramIndex}`;
-      values.push(query._id || query.id);
+      queryBuilder = queryBuilder.eq('id', query._id || query.id);
     }
 
-    const sql = `SELECT * FROM users ${whereClause} LIMIT 1`;
-    const result = await this.db.query(sql, values);
+    const { data, error } = await queryBuilder.single();
     
-    if (result.rows.length === 0) return null;
-    return this.formatUser(result.rows[0]);
+    if (error && error.code !== 'PGRST116') { // PGRST116 = not found
+      throw error;
+    }
+    
+    return data ? this.formatUser(data) : null;
   }
 
   async findById(id, options = {}) {
@@ -111,77 +70,73 @@ class UserModel {
       options.select.includes('+password') || 
       options.select === '+password'
     );
+    
     const selectClause = selectPassword ? '*' : 'id, name, email, nim, kelas, gender, progress, statistics, created_at, updated_at, last_login';
     
-    const query = `SELECT ${selectClause} FROM users WHERE id = $1`;
-    const result = await this.db.query(query, [id]);
+    const { data, error } = await this.supabase
+      .from('users')
+      .select(selectClause)
+      .eq('id', id)
+      .single();
     
-    if (result.rows.length === 0) return null;
-    return this.formatUser(result.rows[0]);
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
+    
+    return data ? this.formatUser(data) : null;
   }
 
   async findByIdAndUpdate(id, updateData, options = {}) {
-    const updates = [];
-    const values = [];
-    let paramIndex = 1;
+    const updates = {};
 
     Object.keys(updateData).forEach(key => {
       if (key === 'password') {
         // Password will be hashed separately
         return;
       }
-      if (key === 'progress' || key === 'statistics') {
-        updates.push(`${key} = $${paramIndex}::jsonb`);
-        values.push(JSON.stringify(updateData[key]));
-      } else {
-        updates.push(`${key} = $${paramIndex}`);
-        values.push(updateData[key]);
-      }
-      paramIndex++;
+      updates[key] = updateData[key];
     });
 
-    updates.push(`updated_at = CURRENT_TIMESTAMP`);
-    values.push(id);
+    const { data, error } = await this.supabase
+      .from('users')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
 
-    const query = `
-      UPDATE users 
-      SET ${updates.join(', ')}
-      WHERE id = $${paramIndex}
-      RETURNING *
-    `;
-
-    const result = await this.db.query(query, values);
-    if (result.rows.length === 0) return null;
-    return this.formatUser(result.rows[0]);
+    if (error) throw error;
+    return data ? this.formatUser(data) : null;
   }
 
   async updatePassword(id, newPassword) {
     const hashedPassword = await bcrypt.hash(newPassword, 12);
-    const query = `
-      UPDATE users 
-      SET password = $1, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $2
-      RETURNING *
-    `;
-    const result = await this.db.query(query, [hashedPassword, id]);
-    if (result.rows.length === 0) return null;
-    return this.formatUser(result.rows[0]);
+    
+    const { data, error } = await this.supabase
+      .from('users')
+      .update({ password_hash: hashedPassword })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data ? this.formatUser(data) : null;
   }
 
   async comparePassword(user, candidatePassword) {
-    return await bcrypt.compare(candidatePassword, user.password);
+    const passwordToCompare = user.password_hash || user.password;
+    return await bcrypt.compare(candidatePassword, passwordToCompare);
   }
 
   async updateLastLogin(id) {
-    const query = `
-      UPDATE users 
-      SET last_login = CURRENT_TIMESTAMP
-      WHERE id = $1
-      RETURNING *
-    `;
-    const result = await this.db.query(query, [id]);
-    if (result.rows.length === 0) return null;
-    return this.formatUser(result.rows[0]);
+    const { data, error } = await this.supabase
+      .from('users')
+      .update({ last_login: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data ? this.formatUser(data) : null;
   }
 
   formatUser(row) {
@@ -192,7 +147,7 @@ class UserModel {
       id: row.id.toString(),
       name: row.name,
       email: row.email,
-      password: row.password,
+      password: row.password_hash || row.password, // Support both field names
       nim: row.nim,
       kelas: row.kelas,
       gender: row.gender,
@@ -228,9 +183,9 @@ let userModelInstance = null;
 
 const getUserModel = async () => {
   if (!userModelInstance) {
-    const { getConnection } = require('../db');
-    const db = await getConnection();
-    userModelInstance = new UserModel(db);
+    const { connectToDatabase } = require('../db');
+    const supabase = await connectToDatabase();
+    userModelInstance = new UserModel(supabase);
   }
   return userModelInstance;
 };

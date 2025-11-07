@@ -1,216 +1,439 @@
 class ProgressManager {
   constructor() {
-    this.authManager = authManager;
+    this.apiBaseUrl = '/api';
+    this.progress = this.loadProgress();
+    this.statistics = this.loadStatistics();
     this.init();
   }
 
   init() {
-    if (this.authManager.isAuthenticated()) {
-      this.loadProgressOverview();
-    }
+    // Listen for progress loaded event dari login
+    window.addEventListener('progressLoaded', (event) => {
+      this.progress = event.detail.progress || this.loadProgress();
+      this.statistics = event.detail.statistics || this.loadStatistics();
+      this.updateUI();
+    });
+    
+    // Initial UI update
+    this.updateUI();
   }
 
-  async loadProgressOverview() {
+  loadProgress() {
+    const stored = localStorage.getItem('userProgress');
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (error) {
+        console.error('Error parsing progress:', error);
+      }
+    }
+    
+    return {
+      quizScores: [],
+      assignments: [],
+      journalEntries: [],
+      materialsViewed: [],
+      videosWatched: []
+    };
+  }
+
+  loadStatistics() {
+    const stored = localStorage.getItem('userStatistics');
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (error) {
+        console.error('Error parsing statistics:', error);
+      }
+    }
+    
+    return {
+      totalQuizAttempts: 0,
+      averageQuizScore: 0,
+      totalStudyTime: 0,
+      streakDays: 0
+    };
+  }
+
+  async saveQuizScore(score, maxScore) {
+    const token = localStorage.getItem('authToken');
+    
     try {
-      const response = await this.authManager.getUserProgress();
-      if (response.success) {
-        this.displayProgressOverview(response.data);
+      // Try backend first
+      const response = await fetch(`${this.apiBaseUrl}/progress/quiz`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ score, maxScore })
+      });
+
+      if (!response.ok) throw new Error('Backend save failed');
+      
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        // Update progress dari backend response
+        this.progress.quizScores.push(data.data.quizScore);
+        this.statistics = data.data.statistics || this.statistics;
+        
+        localStorage.setItem('userProgress', JSON.stringify(this.progress));
+        localStorage.setItem('userStatistics', JSON.stringify(this.statistics));
+        
+        this.updateUI();
+        return data;
       }
     } catch (error) {
-      console.error('Failed to load progress overview from server, using local data:', error);
-      
-      this.loadLocalProgressOverview();
+      console.error('Save to backend failed, using localStorage:', error);
     }
+    
+    // Fallback: save locally
+    const quizScore = {
+      quizId: Date.now().toString(),
+      score,
+      maxScore,
+      percentage: Math.round((score / maxScore) * 100),
+      date: new Date().toISOString()
+    };
+    
+    this.progress.quizScores.push(quizScore);
+    
+    // Update statistics
+    this.statistics.totalQuizAttempts = this.progress.quizScores.length;
+    this.statistics.averageQuizScore = this.calculateAverageScore();
+    
+    localStorage.setItem('userProgress', JSON.stringify(this.progress));
+    localStorage.setItem('userStatistics', JSON.stringify(this.statistics));
+    
+    this.updateUI();
+    
+    return { 
+      success: true, 
+      message: 'Quiz score saved locally',
+      data: { quizScore, statistics: this.statistics }
+    };
   }
 
-  loadLocalProgressOverview() {
+  async saveAssignment(title, fileName, fileData) {
+    const token = localStorage.getItem('authToken');
+    
     try {
-      const quizResults = JSON.parse(localStorage.getItem('localQuizResults') || '[]');
-      const assignments = JSON.parse(localStorage.getItem('localAssignments') || '[]');
-      const journalEntries = JSON.parse(localStorage.getItem('localJournalEntries') || '[]');
-      
-      const overview = {
-        quiz: {
-          totalAttempts: quizResults.length,
-          averageScore: quizResults.length > 0 
-            ? quizResults.reduce((sum, quiz) => sum + quiz.score, 0) / quizResults.length 
-            : 0,
-          lastAttempt: quizResults.length > 0 
-            ? quizResults[quizResults.length - 1].completedAt 
-            : null
+      const response = await fetch(`${this.apiBaseUrl}/progress/assignment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
-        assignments: {
-          totalSubmitted: assignments.length,
-          pending: assignments.filter(a => a.status === 'submitted').length,
-          graded: assignments.filter(a => a.status === 'graded').length
-        },
-        journal: {
-          totalEntries: journalEntries.length,
-          lastEntry: journalEntries.length > 0 
-            ? journalEntries[journalEntries.length - 1].createdAt 
-            : null
-        },
-        materials: {
-          totalViewed: 0,
-          totalTimeSpent: 0
-        },
-        videos: {
-          totalWatched: 0,
-          averageCompletion: 0
-        }
-      };
+        body: JSON.stringify({ title, fileName, fileData })
+      });
 
-      this.displayProgressOverview(overview);
+      if (!response.ok) throw new Error('Backend save failed');
+      
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        this.progress.assignments.push(data.data.assignment);
+        localStorage.setItem('userProgress', JSON.stringify(this.progress));
+        this.updateUI();
+        return data;
+      }
     } catch (error) {
-      console.error('Failed to load local progress overview:', error);
+      console.error('Save to backend failed, using localStorage:', error);
+    }
+    
+    // Fallback: save locally
+    const assignment = {
+      assignmentId: Date.now().toString(),
+      title,
+      fileName,
+      fileData,
+      submittedAt: new Date().toISOString()
+    };
+    
+    this.progress.assignments.push(assignment);
+    localStorage.setItem('userProgress', JSON.stringify(this.progress));
+    this.updateUI();
+    
+    return { 
+      success: true,
+      message: 'Assignment saved locally',
+      data: { assignment }
+    };
+  }
+
+  async saveJournalEntry(title, content) {
+    const token = localStorage.getItem('authToken');
+    
+    try {
+      const response = await fetch(`${this.apiBaseUrl}/progress/journal`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ title, content })
+      });
+
+      if (!response.ok) throw new Error('Backend save failed');
+      
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        this.progress.journalEntries.push(data.data.entry);
+        localStorage.setItem('userProgress', JSON.stringify(this.progress));
+        this.updateUI();
+        return data;
+      }
+    } catch (error) {
+      console.error('Save to backend failed, using localStorage:', error);
+    }
+    
+    // Fallback: save locally
+    const entry = {
+      entryId: Date.now().toString(),
+      title,
+      content,
+      date: new Date().toISOString()
+    };
+    
+    this.progress.journalEntries.push(entry);
+    localStorage.setItem('userProgress', JSON.stringify(this.progress));
+    this.updateUI();
+    
+    return { 
+      success: true,
+      message: 'Journal entry saved locally',
+      data: { entry }
+    };
+  }
+
+  async trackMaterialView(materialId, title = '') {
+    const token = localStorage.getItem('authToken');
+    
+    // Check if already viewed
+    if (this.progress.materialsViewed.includes(materialId)) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${this.apiBaseUrl}/progress/material-viewed`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ materialId, title })
+      });
+
+      if (!response.ok) throw new Error('Backend save failed');
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        this.progress.materialsViewed.push(materialId);
+        localStorage.setItem('userProgress', JSON.stringify(this.progress));
+        this.updateUI();
+        return data;
+      }
+    } catch (error) {
+      console.error('Track material failed, using localStorage:', error);
+    }
+    
+    // Fallback: save locally
+    this.progress.materialsViewed.push(materialId);
+    localStorage.setItem('userProgress', JSON.stringify(this.progress));
+    this.updateUI();
+    
+    return { success: true, message: 'Material tracked locally' };
+  }
+
+  async trackVideoWatch(videoId, title = '') {
+    const token = localStorage.getItem('authToken');
+    
+    // Check if already watched
+    if (this.progress.videosWatched.includes(videoId)) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${this.apiBaseUrl}/progress/video-watched`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ videoId, title })
+      });
+
+      if (!response.ok) throw new Error('Backend save failed');
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        this.progress.videosWatched.push(videoId);
+        localStorage.setItem('userProgress', JSON.stringify(this.progress));
+        this.updateUI();
+        return data;
+      }
+    } catch (error) {
+      console.error('Track video failed, using localStorage:', error);
+    }
+    
+    // Fallback: save locally
+    this.progress.videosWatched.push(videoId);
+    localStorage.setItem('userProgress', JSON.stringify(this.progress));
+    this.updateUI();
+    
+    return { success: true, message: 'Video tracked locally' };
+  }
+
+  getQuizScores() {
+    return this.progress.quizScores || [];
+  }
+
+  getAssignments() {
+    return this.progress.assignments || [];
+  }
+
+  getJournalEntries() {
+    return this.progress.journalEntries || [];
+  }
+
+  getStatistics() {
+    return this.statistics;
+  }
+
+  calculateAverageScore() {
+    const scores = this.progress.quizScores || [];
+    if (scores.length === 0) return 0;
+    
+    const total = scores.reduce((sum, quiz) => sum + (quiz.percentage || 0), 0);
+    return Math.round(total / scores.length);
+  }
+
+  updateUI() {
+    // Update dashboard if elements exist
+    this.updateDashboard();
+    this.updateQuizHistory();
+  }
+
+  updateDashboard() {
+    const totalQuiz = document.getElementById('total-quiz');
+    const avgScore = document.getElementById('average-score');
+    const totalAssignments = document.getElementById('total-assignments');
+    const totalJournals = document.getElementById('total-journals');
+    
+    if (totalQuiz) {
+      totalQuiz.textContent = this.progress.quizScores?.length || 0;
+    }
+    
+    if (avgScore) {
+      avgScore.textContent = this.statistics.averageQuizScore || this.calculateAverageScore();
+    }
+    
+    if (totalAssignments) {
+      totalAssignments.textContent = this.progress.assignments?.length || 0;
+    }
+    
+    if (totalJournals) {
+      totalJournals.textContent = this.progress.journalEntries?.length || 0;
     }
   }
 
-  displayProgressOverview(data) {
-    const container = document.getElementById('progress-overview');
-    if (!container) return;
-
-    const overviewHTML = `
-      <div class="progress-cards">
-        <div class="progress-card">
-          <h3>📝 Quiz</h3>
-          <div class="progress-stats">
-            <div class="stat">
-              <span class="stat-value">${data.quiz.totalAttempts}</span>
-              <span class="stat-label">Total Percobaan</span>
-            </div>
-            <div class="stat">
-              <span class="stat-value">${Math.round(data.quiz.averageScore)}%</span>
-              <span class="stat-label">Rata-rata Nilai</span>
-            </div>
+  updateQuizHistory() {
+    const quizList = document.getElementById('quiz-list');
+    if (!quizList) return;
+    
+    const quizScores = this.getQuizScores();
+    
+    if (quizScores.length === 0) {
+      quizList.innerHTML = '<p class="text-muted">Belum ada quiz yang dikerjakan.</p>';
+      return;
+    }
+    
+    quizList.innerHTML = quizScores.map((quiz, index) => `
+      <div class="quiz-item card mb-2 p-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="mb-1">Quiz #${index + 1}</h6>
+            <p class="mb-0"><strong>Skor:</strong> ${quiz.score}/${quiz.maxScore} (${quiz.percentage}%)</p>
           </div>
-        </div>
-
-        <div class="progress-card">
-          <h3>📋 Tugas</h3>
-          <div class="progress-stats">
-            <div class="stat">
-              <span class="stat-value">${data.assignments.totalSubmitted}</span>
-              <span class="stat-label">Total Dikirim</span>
-            </div>
-            <div class="stat">
-              <span class="stat-value">${data.assignments.graded}</span>
-              <span class="stat-label">Sudah Dinilai</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="progress-card">
-          <h3>📖 Jurnal</h3>
-          <div class="progress-stats">
-            <div class="stat">
-              <span class="stat-value">${data.journal.totalEntries}</span>
-              <span class="stat-label">Total Entri</span>
-            </div>
-            <div class="stat">
-              <span class="stat-value">${data.materials.totalTimeSpent}</span>
-              <span class="stat-label">Menit Belajar</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="progress-card">
-          <h3>🎥 Video</h3>
-          <div class="progress-stats">
-            <div class="stat">
-              <span class="stat-value">${data.videos.totalWatched}</span>
-              <span class="stat-label">Video Ditonton</span>
-            </div>
-            <div class="stat">
-              <span class="stat-value">${Math.round(data.videos.averageCompletion)}%</span>
-              <span class="stat-label">Rata-rata Selesai</span>
-            </div>
+          <div class="text-end">
+            <small class="text-muted">${new Date(quiz.date).toLocaleString('id-ID')}</small>
           </div>
         </div>
       </div>
-    `;
-
-    container.innerHTML = overviewHTML;
-  }
-
-  trackMaterialView(materialId, title) {
-    if (this.authManager.isAuthenticated()) {
-      this.authManager.trackMaterialView({
-        materialId,
-        title,
-        timeSpent: 5 // Default 5 minutes
-      });
-    }
-  }
-
-  trackVideoWatch(videoId, title, completionPercentage = 100) {
-    if (this.authManager.isAuthenticated()) {
-      this.authManager.trackVideoWatch({
-        videoId,
-        title,
-        completionPercentage
-      });
-    }
+    `).reverse().join('');
   }
 }
 
-const progressManager = new ProgressManager();
+// Global instance
+window.progressManager = new ProgressManager();
 
 const progressStyles = `
-  .progress-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-top: 20px;
-  }
-
-  .progress-card {
-    background: var(--card);
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: var(--shadow);
+  .quiz-item {
+    background: #fff;
     border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    transition: all 0.2s;
   }
 
-  .progress-card h3 {
-    margin: 0 0 16px 0;
-    color: var(--text);
-    font-size: 1.1em;
+  .quiz-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
   }
 
-  .progress-stats {
+  .text-muted {
+    color: #6b7280;
+  }
+
+  .card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  .mb-2 {
+    margin-bottom: 0.5rem;
+  }
+
+  .p-3 {
+    padding: 1rem;
+  }
+
+  .d-flex {
     display: flex;
+  }
+
+  .justify-content-between {
     justify-content: space-between;
-    gap: 16px;
   }
 
-  .stat {
-    text-align: center;
-    flex: 1;
+  .align-items-center {
+    align-items: center;
   }
 
-  .stat-value {
-    display: block;
-    font-size: 1.5em;
-    font-weight: 700;
-    color: var(--brand);
-    margin-bottom: 4px;
+  .mb-1 {
+    margin-bottom: 0.25rem;
   }
 
-  .stat-label {
-    font-size: 0.85em;
-    color: var(--muted);
-    font-weight: 500;
+  .mb-0 {
+    margin-bottom: 0;
+  }
+
+  .text-end {
+    text-align: right;
   }
 
   @media (max-width: 640px) {
-    .progress-cards {
-      grid-template-columns: 1fr;
-    }
-    
-    .progress-stats {
+    .quiz-item .d-flex {
       flex-direction: column;
       gap: 8px;
+    }
+    
+    .text-end {
+      text-align: left;
     }
   }
 `;

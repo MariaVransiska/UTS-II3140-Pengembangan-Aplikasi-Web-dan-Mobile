@@ -9,6 +9,7 @@
   <link rel="icon" type="image/png" href="png/icon salib.png" />
   <link rel="stylesheet" href="style.css" />
   <script src="js/auth.js"></script>
+  <script src="js/progress.js"></script>
 </head>
 <body>
   <header>
@@ -65,6 +66,37 @@
       </form>
       
       <div id="profile-status" class="muted" style="margin-top: 16px;"></div>
+      
+      <!-- Progress Statistics -->
+      <div class="progress-section" style="margin-top: 32px;">
+        <h3>📊 Statistik Belajar</h3>
+        <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-top: 16px;">
+          <div class="stat-card" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; text-align: center;">
+            <div style="font-size: 2em; font-weight: 700; color: #0ea5a6;" id="total-quiz">0</div>
+            <div style="color: #6b7280; font-size: 0.9em;">Total Quiz</div>
+          </div>
+          <div class="stat-card" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; text-align: center;">
+            <div style="font-size: 2em; font-weight: 700; color: #0ea5a6;" id="average-score">0</div>
+            <div style="color: #6b7280; font-size: 0.9em;">Rata-rata Nilai</div>
+          </div>
+          <div class="stat-card" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; text-align: center;">
+            <div style="font-size: 2em; font-weight: 700; color: #0ea5a6;" id="total-assignments">0</div>
+            <div style="color: #6b7280; font-size: 0.9em;">Tugas Dikumpulkan</div>
+          </div>
+          <div class="stat-card" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; text-align: center;">
+            <div style="font-size: 2em; font-weight: 700; color: #0ea5a6;" id="total-journals">0</div>
+            <div style="color: #6b7280; font-size: 0.9em;">Jurnal Ditulis</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Quiz History -->
+      <div class="quiz-history-section" style="margin-top: 32px;">
+        <h3>📝 Riwayat Quiz</h3>
+        <div id="quiz-list" style="margin-top: 16px;">
+          <p class="text-muted">Belum ada quiz yang dikerjakan.</p>
+        </div>
+      </div>
       
       <!-- Logout Button -->
       <div class="logout-section" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
