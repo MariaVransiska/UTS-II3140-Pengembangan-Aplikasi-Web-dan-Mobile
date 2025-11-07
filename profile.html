@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="style.css" />
   <script src="js/auth.js"></script>
   <script src="js/progress.js"></script>
+  <script src="js/page-protection.js"></script>
 </head>
 <body>
   <header>
@@ -25,14 +26,14 @@
     </nav>
   </header>
   <main class="container" role="main">
-      <h2>Profil Pengguna</h2>
-      
-      <div data-profile-incomplete>
-        <div class="profile-warning">
-          <h3>📝 Lengkapi Profil Anda</h3>
-          <p>Silakan lengkapi informasi profil Anda terlebih dahulu.</p>
-        </div>
+    <h2>Profil Pengguna</h2>
+    
+    <div data-profile-incomplete>
+      <div class="profile-warning">
+        <h3>⚠️ Lengkapi Profil Anda</h3>
+        <p>Silakan lengkapi informasi profil Anda terlebih dahulu.</p>
       </div>
+    </div>
       
       <div class="profile-header">
         <img class="avatar" id="user-avatar" src="png/icon profile cowo.png" alt="Avatar" width="96" height="96">
@@ -46,8 +47,8 @@
         <label for="gender">Gender <span style="color: red;">*</span></label>
         <select id="gender" required>
           <option value="">Pilih Gender</option>
-          <option value="male">Laki-laki</option>
-          <option value="female">Perempuan</option>
+          <option value="Laki-laki">Laki-laki</option>
+          <option value="Perempuan">Perempuan</option>
         </select>
         
         <label for="nim">NIM <span style="color: red;">*</span></label>
@@ -56,9 +57,9 @@
         <label for="kelas">Kelas <span style="color: red;">*</span></label>
         <select id="kelas" required>
           <option value="">Pilih Kelas</option>
-          <option value="K1">K1</option>
-          <option value="K2">K2</option>
-          <option value="K3">K3</option>
+          <option value="K01">K01</option>
+          <option value="K02">K02</option>
+          <option value="K03">K03</option>
         </select>
         
         <br>
@@ -94,21 +95,224 @@
       <div class="quiz-history-section" style="margin-top: 32px;">
         <h3>📝 Riwayat Quiz</h3>
         <div id="quiz-list" style="margin-top: 16px;">
-          <p class="text-muted">Belum ada quiz yang dikerjakan.</p>
+          <p class="muted">Belum ada quiz yang dikerjakan.</p>
         </div>
       </div>
       
       <!-- Logout Button -->
       <div class="logout-section" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-        <button id="logout-btn" class="logout-btn">Logout</button>
+        <button id="logout-btn" class="logout-btn" style="background: #dc2626; color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 1em;">Logout</button>
       </div>
-    </div>
   </main>
+  
   <footer>
     <div class="container">
       <p class="muted">© 2025 Virtual Lab Agama Kristen</p>
     </div>
   </footer>
+  
+  <script>
+    // ========================================
+    // PROFILE PAGE LOGIC
+    // ========================================
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      const authManager = window.authManager;
+      const progressManager = window.progressManager;
+      
+      // Check if user is logged in
+      const userData = authManager.getCurrentUser();
+      if (!userData) {
+        window.location.href = 'login.html';
+        return;
+      }
+      
+      // Load and display user profile
+      loadUserProfile(userData);
+      
+      // Load statistics and quiz history
+      loadStatistics();
+      loadQuizHistory();
+      
+      // Handle profile form submission
+      document.getElementById('profile-form').addEventListener('submit', handleProfileSubmit);
+      
+      // Handle logout
+      document.getElementById('logout-btn').addEventListener('click', handleLogout);
+      
+      // Listen for progress updates
+      window.addEventListener('progressLoaded', function() {
+        loadStatistics();
+        loadQuizHistory();
+      });
+    });
+    
+    // Load user profile data
+    function loadUserProfile(userData) {
+      const nameInput = document.getElementById('name');
+      const genderSelect = document.getElementById('gender');
+      const nimInput = document.getElementById('nim');
+      const kelasSelect = document.getElementById('kelas');
+      const savedProfile = document.getElementById('saved-profile');
+      const avatar = document.getElementById('user-avatar');
+      
+      // Populate form with existing data
+      if (userData.name) nameInput.value = userData.name;
+      if (userData.gender) genderSelect.value = userData.gender;
+      if (userData.nim) nimInput.value = userData.nim;
+      if (userData.kelas) kelasSelect.value = userData.kelas;
+      
+      // Show saved profile info
+      if (userData.name && userData.gender && userData.nim && userData.kelas) {
+        savedProfile.innerHTML = `
+          <h3>${userData.name}</h3>
+          <p><strong>Email:</strong> ${userData.email}</p>
+          <p><strong>NIM:</strong> ${userData.nim}</p>
+          <p><strong>Kelas:</strong> ${userData.kelas}</p>
+          <p><strong>Gender:</strong> ${userData.gender}</p>
+        `;
+        
+        // Update avatar based on gender
+        if (userData.gender === 'Perempuan') {
+          avatar.src = 'png/icon profile cewe.png';
+        } else {
+          avatar.src = 'png/icon profile cowo.png';
+        }
+        
+        // Hide warning
+        const warning = document.querySelector('[data-profile-incomplete]');
+        if (warning) warning.style.display = 'none';
+      } else {
+        savedProfile.innerHTML = '<p class="muted">Profil belum lengkap. Silakan lengkapi data di bawah.</p>';
+      }
+    }
+    
+    // Handle profile form submission
+    async function handleProfileSubmit(e) {
+      e.preventDefault();
+      
+      const name = document.getElementById('name').value.trim();
+      const gender = document.getElementById('gender').value;
+      const nim = document.getElementById('nim').value.trim();
+      const kelas = document.getElementById('kelas').value;
+      const statusDiv = document.getElementById('profile-status');
+      
+      if (!name || !gender || !nim || !kelas) {
+        statusDiv.innerHTML = '<p style="color: red;">Semua field harus diisi!</p>';
+        return;
+      }
+      
+      // Validate NIM (10 digits)
+      if (!/^\d{10}$/.test(nim)) {
+        statusDiv.innerHTML = '<p style="color: red;">NIM harus 10 digit angka!</p>';
+        return;
+      }
+      
+      try {
+        statusDiv.innerHTML = '<p>Menyimpan profil...</p>';
+        
+        const authManager = window.authManager;
+        const result = await authManager.updateProfile({
+          name,
+          gender,
+          nim,
+          kelas
+        });
+        
+        if (result.success) {
+          statusDiv.innerHTML = '<p style="color: green;">✅ Profil berhasil disimpan!</p>';
+          
+          // Reload profile
+          const userData = authManager.getCurrentUser();
+          loadUserProfile(userData);
+          
+          // Update avatar
+          const avatar = document.getElementById('user-avatar');
+          if (gender === 'Perempuan') {
+            avatar.src = 'png/icon profile cewe.png';
+          } else {
+            avatar.src = 'png/icon profile cowo.png';
+          }
+        } else {
+          statusDiv.innerHTML = `<p style="color: red;">❌ ${result.message || 'Gagal menyimpan profil'}</p>`;
+        }
+      } catch (error) {
+        console.error('Error saving profile:', error);
+        statusDiv.innerHTML = '<p style="color: red;">❌ Terjadi kesalahan saat menyimpan profil</p>';
+      }
+    }
+    
+    // Load statistics
+    function loadStatistics() {
+      const progressManager = window.progressManager;
+      const stats = progressManager.getStatistics();
+      const progress = progressManager.progress;
+      
+      // Update statistics cards
+      document.getElementById('total-quiz').textContent = stats.totalQuizAttempts || 0;
+      document.getElementById('average-score').textContent = (stats.averageQuizScore || 0) + '%';
+      document.getElementById('total-assignments').textContent = progress.assignments?.length || 0;
+      document.getElementById('total-journals').textContent = progress.journalEntries?.length || 0;
+    }
+    
+    // Load quiz history
+    function loadQuizHistory() {
+      const progressManager = window.progressManager;
+      const quizScores = progressManager.getQuizScores();
+      const quizList = document.getElementById('quiz-list');
+      
+      if (!quizScores || quizScores.length === 0) {
+        quizList.innerHTML = '<p class="muted">Belum ada quiz yang dikerjakan.</p>';
+        return;
+      }
+      
+      // Sort by date (newest first)
+      const sorted = [...quizScores].sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      // Display quiz history
+      quizList.innerHTML = sorted.map((quiz, index) => {
+        const date = new Date(quiz.date);
+        const dateStr = date.toLocaleDateString('id-ID', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        
+        const percentage = quiz.percentage || Math.round((quiz.score / quiz.maxScore) * 100);
+        const scoreColor = percentage >= 80 ? '#10b981' : percentage >= 60 ? '#f59e0b' : '#ef4444';
+        
+        return `
+          <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <h4 style="margin: 0 0 8px 0;">Quiz #${sorted.length - index}</h4>
+                <p style="margin: 0; color: #6b7280; font-size: 0.9em;">${dateStr}</p>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 1.5em; font-weight: 700; color: ${scoreColor};">
+                  ${quiz.score}/${quiz.maxScore}
+                </div>
+                <div style="color: ${scoreColor}; font-weight: 600;">
+                  ${percentage}%
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // Handle logout
+    function handleLogout() {
+      if (confirm('Apakah Anda yakin ingin logout?')) {
+        const authManager = window.authManager;
+        authManager.logout();
+        window.location.href = 'index.html';
+      }
+    }
+  </script>
   <script src="script.js" defer></script>
 </body>
 </html>
