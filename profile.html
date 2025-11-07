@@ -52,7 +52,7 @@
         </select>
         
         <label for="nim">NIM <span style="color: red;">*</span></label>
-        <input id="nim" type="text" placeholder="10 digit NIM" pattern="[0-9]{10}" minlength="10" maxlength="10" required autocomplete="on" />
+        <input id="nim" type="text" placeholder="8 digit NIM" pattern="[0-9]{8}" minlength="8" maxlength="8" required autocomplete="on" />
         
         <label for="kelas">Kelas <span style="color: red;">*</span></label>
         <select id="kelas" required>
@@ -257,9 +257,9 @@
         return;
       }
       
-      // Validate NIM (10 digits)
-      if (!/^\d{10}$/.test(nim)) {
-        statusDiv.innerHTML = '<p style="color: red;">NIM harus 10 digit angka!</p>';
+      // Validate NIM (8 digits)
+      if (!/^\d{8}$/.test(nim)) {
+        statusDiv.innerHTML = '<p style="color: red;">NIM harus 8 digit angka!</p>';
         return;
       }
       
