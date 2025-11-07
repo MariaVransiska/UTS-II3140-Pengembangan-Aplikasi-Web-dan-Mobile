@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Profil pengguna: pilih gender dan nama.">
+  <meta name="theme-color" content="#0ea5a6" />
+  <title>Profil</title>
+  <link rel="icon" type="image/png" href="png/icon salib.png" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="js/auth.js"></script>
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="index.html"><img class="nav-icon" src="png/icon salib.png" alt="Home">Home</a>
+      <a href="materials.html">Materi</a>
+      <a href="videos.html">Video</a>
+      <a href="verses.html">Ayat Harian</a>
+      <a href="quiz.html">Quiz</a>
+      <a href="assignments.html">Tugas</a>
+      <a href="journal.html">Jurnal</a>
+      <a href="profile.html">Profil</a>
+    </nav>
+  </header>
+  <main class="container" role="main">
+      <h2>Profil Pengguna</h2>
+      
+      <div data-profile-incomplete>
+        <div class="profile-warning">
+          <h3>📝 Lengkapi Profil Anda</h3>
+          <p>Silakan lengkapi informasi profil Anda terlebih dahulu.</p>
+        </div>
+      </div>
+      
+      <div class="profile-header">
+        <img class="avatar" id="user-avatar" src="png/icon profile cowo.png" alt="Avatar" width="96" height="96">
+        <div id="saved-profile" class="profile-info"></div>
+      </div>
+      
+      <form id="profile-form" autocomplete="on">
+        <label for="name">Nama <span style="color: red;">*</span></label>
+        <input id="name" type="text" placeholder="Nama lengkap" minlength="1" maxlength="50" required autocomplete="name" />
+        
+        <label for="gender">Gender <span style="color: red;">*</span></label>
+        <select id="gender" required>
+          <option value="">Pilih Gender</option>
+          <option value="male">Laki-laki</option>
+          <option value="female">Perempuan</option>
+        </select>
+        
+        <label for="nim">NIM <span style="color: red;">*</span></label>
+        <input id="nim" type="text" placeholder="10 digit NIM" pattern="[0-9]{10}" minlength="10" maxlength="10" required autocomplete="on" />
+        
+        <label for="kelas">Kelas <span style="color: red;">*</span></label>
+        <select id="kelas" required>
+          <option value="">Pilih Kelas</option>
+          <option value="K1">K1</option>
+          <option value="K2">K2</option>
+          <option value="K3">K3</option>
+        </select>
+        
+        <br>
+        <button type="submit" id="save-profile">Simpan Profil</button>
+      </form>
+      
+      <div id="profile-status" class="muted" style="margin-top: 16px;"></div>
+      
+      <!-- Logout Button -->
+      <div class="logout-section" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+        <button id="logout-btn" class="logout-btn">Logout</button>
+      </div>
+    </div>
+  </main>
+  <footer>
+    <div class="container">
+      <p class="muted">© 2025 Virtual Lab Agama Kristen</p>
+    </div>
+  </footer>
+  <script src="script.js" defer></script>
+</body>
+</html>

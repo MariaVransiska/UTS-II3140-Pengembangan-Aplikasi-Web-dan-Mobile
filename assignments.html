@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Upload tugas dengan drag-and-drop.">
+  <meta name="theme-color" content="#0ea5a6" />
+  <title>Tugas</title>
+  <link rel="icon" type="image/png" href="png/icon salib.png" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="js/auth.js"></script>
+  <script src="js/page-protection.js"></script>
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="index.html"><img class="nav-icon" src="png/icon salib.png" alt="Home">Home</a>
+      <a href="materials.html">Materi</a>
+      <a href="videos.html">Video</a>
+      <a href="verses.html">Ayat Harian</a>
+      <a href="quiz.html">Quiz</a>
+      <a href="assignments.html" class="active">Tugas</a>
+      <a href="journal.html">Jurnal</a>
+      <a href="profile.html">Profil</a>
+    </nav>
+  </header>
+
+  <main class="container" role="main">
+
+      <h2>Daftar Tugas</h2>
+    <section aria-labelledby="tugas-1">
+      <details open>
+        <summary id="tugas-1">Pengumpulan Tugas 1 Jurnal Mingguan</summary>
+        <p class="muted">
+          Buatlah refleksi ibadah minggu ini (200-300 kata) dan unggah dalam format PDF/DOCX.
+        </p>
+      </details>
+    </section>
+
+    <h2>Upload Tugas</h2>
+    <div id="dropzone" class="dropzone" role="button" tabindex="0" aria-label="Unggah berkas. Tekan Enter untuk memilih berkas atau drop file di area ini.">
+      Drop file atau klik di sini
+    </div>
+    <input type="file" id="file-input" multiple hidden />
+    <div id="file-list" aria-live="polite"></div>
+    
+    <button id="submit-files">Submit</button>
+      <p id="submit-status" class="muted"></p>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p class="muted">© 2025 Virtual Lab Agama Kristen</p>
+    </div>
+  </footer>
+
+  <script src="script.js" defer></script>
+</body>
+</html>
+
+

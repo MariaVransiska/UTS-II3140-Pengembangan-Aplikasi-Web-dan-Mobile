@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Virtual Lab Agama Kristen: materi, video, kuis, tugas, jurnal, dan profil interaktif." />
+  <meta name="theme-color" content="#0ea5a6" />
+  <title>Virtual Lab Kristen - Home</title>
+  <link rel="icon" type="image/png" href="png/icon salib.png" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="js/auth.js"></script>
+  <script src="js/progress.js"></script>
+  <script>
+    // Update home page based on authentication status
+    document.addEventListener('DOMContentLoaded', function() {
+      function updateHomePage() {
+        const loginSection = document.getElementById('login-section');
+        const welcomeSection = document.getElementById('welcome-section');
+        
+        if (typeof authManager !== 'undefined' && authManager.isAuthenticated()) {
+          // User is logged in - show welcome section
+          if (loginSection) loginSection.style.display = 'none';
+          if (welcomeSection) {
+            welcomeSection.style.display = 'block';
+            
+            // Update user info
+            const welcomeName = document.getElementById('welcome-name');
+            const welcomeKelas = document.getElementById('welcome-kelas');
+            
+            if (welcomeName && authManager.user) {
+              welcomeName.textContent = authManager.user.name || 'User';
+            }
+            if (welcomeKelas && authManager.user) {
+              welcomeKelas.textContent = authManager.user.kelas || '-';
+            }
+          }
+        } else {
+          // User is not logged in - show login section
+          if (loginSection) loginSection.style.display = 'block';
+          if (welcomeSection) welcomeSection.style.display = 'none';
+        }
+      }
+      
+      // Update immediately
+      updateHomePage();
+      
+      // Update when auth status changes
+      if (typeof authManager !== 'undefined') {
+        // Override the original updateUI to include home page update
+        const originalUpdateUI = authManager.updateUI;
+        authManager.updateUI = function() {
+          originalUpdateUI.call(this);
+          updateHomePage();
+        };
+      }
+    });
+  </script>
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="index.html"><img class="nav-icon" src="png/icon salib.png" alt="Home">Home</a>
+      <a href="materials.html">Materi</a>
+      <a href="videos.html">Video</a>
+      <a href="verses.html">Ayat Harian</a>
+      <a href="quiz.html">Quiz</a>
+      <a href="assignments.html">Tugas</a>
+      <a href="journal.html">Jurnal</a>
+      <a href="profile.html">Profil</a>
+    </nav>
+  </header>
+  <main class="container" role="main">
+    <h1>Virtual Lab Agama Kristen</h1>
+    <p>
+      Mata kuliah Agama Kristen : Membahas dasar-dasar iman, doktrin inti, dan penerapannya dalam etika serta kehidupan sehari-hari. 
+      Mahasiswa diharapkan memahami kebenaran Alkitab dan mengembangkan karakter Kristiani di tengah masyarakat modern.
+    </p>
+
+    <h2>Dosen Pengampu</h2>
+    <ul>
+      <li>Dr. Izany Ghei, M.Th (K1)</li>
+      <li>Dr. Siska Pingkhan, M.Div (K2)</li>
+      <li>Dr. Ronald Simanjuntak, M.Th (K3)</li>
+    </ul>
+
+    <h2>Asisten Dosen</h2>
+    <ul>
+      <li>Maria Vransiska (K1)</li>
+      <li>Pingkhan Khan (K2)</li>
+      <li>Brim Stone (K3)</li>
+    </ul>
+    <p>Amsal 1:7 - "Permulaan pengetahuan adalah takut akan Tuhan; hanya orang bodoh yang menghina hikmat dan didikan."</p>
+    
+    <!-- Login/Register Section -->
+    <div class="login-section" id="login-section">
+      <h2>Masuk ke Virtual Lab</h2>
+      <p>Silakan login atau daftar untuk mengakses fitur lengkap Virtual Lab.</p>
+      <button onclick="window.location.href='login.html'">Login / Daftar</button>
+    </div>
+    
+    <!-- Welcome Section for Authenticated Users -->
+    <div class="welcome-section" id="welcome-section" style="display: none;">
+      <h2>Selamat Datang, <span id="welcome-name">User</span>!</h2>
+      <p>Anda telah login sebagai mahasiswa kelas <span id="welcome-kelas">-</span>.</p>
+      <div id="progress-overview"></div>
+      <div class="welcome-actions">
+        <button onclick="window.location.href='profile.html'" class="profile-btn">Edit Profil</button>
+        <button onclick="if(confirm(\'Apakah Anda yakin ingin logout?\')) { if(typeof authManager !== \'undefined\') authManager.logout(); window.location.href=\'index.html\'; }" class="logout-btn">Logout</button>
+      </div>
+    </div>
+  </main>
+  <footer>
+    <div class="container">
+      <p class="muted">© 2025 Virtual Lab Agama Kristen</p>
+    </div>
+  </footer>
+</body>
+</html>
+  
