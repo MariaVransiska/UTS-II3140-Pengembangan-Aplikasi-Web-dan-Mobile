@@ -133,7 +133,8 @@
       // ✅ SYNC data dari backend dulu
       await syncDataFromBackend();
       
-      // Load statistics and quiz history
+      // ✅ PENTING: Load statistics dan quiz history SETELAH sync selesai
+      console.log('🎨 Rendering statistics and quiz history...');
       loadStatistics();
       loadQuizHistory();
       
@@ -145,6 +146,7 @@
       
       // Listen for progress updates
       window.addEventListener('progressLoaded', function() {
+        console.log('🔄 Progress loaded event triggered - reloading stats');
         loadStatistics();
         loadQuizHistory();
       });
@@ -320,6 +322,9 @@
       const assignments = progress.assignments || [];
       const journals = progress.journalEntries || [];
       
+      console.log('📝 Quiz scores array:', quizScores);
+      console.log('📝 Quiz count:', quizScores.length);
+      
       // ✅ Hitung rata-rata dari percentage (bukan raw score)
       let averageQuizScore = 0;
       if (quizScores.length > 0) {
@@ -353,10 +358,12 @@
       
       if (totalQuizElement) {
         totalQuizElement.textContent = quizScores.length;
+        console.log('✅ Updated total-quiz to:', quizScores.length);
       }
       
       if (avgScoreElement) {
         avgScoreElement.textContent = averageQuizScore + '%';
+        console.log('✅ Updated average-score to:', averageQuizScore + '%');
       }
       
       if (totalAssignmentsElement) {
