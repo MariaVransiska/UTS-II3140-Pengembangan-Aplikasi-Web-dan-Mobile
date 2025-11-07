@@ -1,17 +1,19 @@
 [build]
-  command = "npm install"
-  functions = "netlify/functions"
   publish = "."
+  command = ""
 
 [functions]
+  directory = "netlify/functions"
   node_bundler = "esbuild"
-  external_node_modules = ["pg"]
 
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/server/:splat"
   status = 200
-  force = true
 
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
 
 
