@@ -1,6 +1,6 @@
 [build]
   publish = "."
-  command = ""
+  command = "echo 'No build needed'"
 
 [functions]
   directory = "netlify/functions"
@@ -15,6 +15,7 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
 
 
 
