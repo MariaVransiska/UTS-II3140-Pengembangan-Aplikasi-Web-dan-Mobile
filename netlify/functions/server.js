@@ -18,7 +18,8 @@ exports.handler = async (event, context) => {
   if (!cleanPath.startsWith('/')) cleanPath = '/' + cleanPath;
 
   const authHandler = require('./auth');
-  const progressHandler = require('../../progress');
+  const progressHandler = require('./progress');
+
 
 
 
