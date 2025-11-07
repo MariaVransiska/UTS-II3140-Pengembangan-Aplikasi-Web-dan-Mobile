@@ -133,8 +133,18 @@
       // ✅ SYNC data dari backend dulu
       await syncDataFromBackend();
       
+      // ✅ Tunggu sebentar untuk memastikan data tersimpan di localStorage
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // ✅ PENTING: Load statistics dan quiz history SETELAH sync selesai
       console.log('🎨 Rendering statistics and quiz history...');
+      
+      // ✅ Force reload progress dari localStorage
+      if (window.progressManager) {
+        window.progressManager.progress = window.progressManager.loadProgress();
+        console.log('📦 Loaded progress:', window.progressManager.progress);
+      }
+      
       loadStatistics();
       loadQuizHistory();
       
@@ -309,18 +319,21 @@
     
     // Load statistics
     function loadStatistics() {
+      console.log('📊 === START loadStatistics() ===');
+      
       const progressManager = window.progressManager;
       
-      // Reload dari localStorage untuk memastikan data terbaru
+      // ✅ Reload dari localStorage untuk memastikan data terbaru
       progressManager.progress = progressManager.loadProgress();
       const progress = progressManager.progress;
       
-      console.log('📊 Loading statistics from progress data:', progress);
+      console.log('� Progress object:', progress);
+      console.log('📦 Progress type:', typeof progress);
       
       // ✅ Hitung statistik langsung dari data progress
-      const quizScores = progress.quizScores || [];
-      const assignments = progress.assignments || [];
-      const journals = progress.journalEntries || [];
+      const quizScores = progress?.quizScores || [];
+      const assignments = progress?.assignments || [];
+      const journals = progress?.journalEntries || [];
       
       console.log('📝 Quiz scores array:', quizScores);
       console.log('📝 Quiz count:', quizScores.length);
@@ -350,29 +363,45 @@
         totalJournals: journals.length
       });
       
-      // ✅ Update UI dengan data yang dihitung
+      // ✅ Update UI dengan data yang dihitung - FORCE innerHTML untuk memastikan update
       const totalQuizElement = document.getElementById('total-quiz');
       const avgScoreElement = document.getElementById('average-score');
       const totalAssignmentsElement = document.getElementById('total-assignments');
       const totalJournalsElement = document.getElementById('total-journals');
       
+      console.log('🎯 Elements found:', {
+        totalQuiz: !!totalQuizElement,
+        avgScore: !!avgScoreElement,
+        totalAssignments: !!totalAssignmentsElement,
+        totalJournals: !!totalJournalsElement
+      });
+      
       if (totalQuizElement) {
+        totalQuizElement.innerHTML = quizScores.length;
         totalQuizElement.textContent = quizScores.length;
-        console.log('✅ Updated total-quiz to:', quizScores.length);
+        console.log('✅ Updated total-quiz to:', quizScores.length, 'DOM:', totalQuizElement.textContent);
       }
       
       if (avgScoreElement) {
-        avgScoreElement.textContent = averageQuizScore + '%';
-        console.log('✅ Updated average-score to:', averageQuizScore + '%');
+        const scoreText = averageQuizScore + '%';
+        avgScoreElement.innerHTML = scoreText;
+        avgScoreElement.textContent = scoreText;
+        console.log('✅ Updated average-score to:', scoreText, 'DOM:', avgScoreElement.textContent);
       }
       
       if (totalAssignmentsElement) {
+        totalAssignmentsElement.innerHTML = assignments.length;
         totalAssignmentsElement.textContent = assignments.length;
+        console.log('✅ Updated total-assignments to:', assignments.length);
       }
       
       if (totalJournalsElement) {
+        totalJournalsElement.innerHTML = journals.length;
         totalJournalsElement.textContent = journals.length;
+        console.log('✅ Updated total-journals to:', journals.length);
       }
+      
+      console.log('📊 === END loadStatistics() ===');
     }
     
     // Load quiz history
