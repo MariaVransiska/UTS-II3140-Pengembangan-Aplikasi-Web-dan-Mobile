@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { connectToDatabase, getDbType } = require('./db');
+const { connectToDatabase, getDbType } = require('./db/index');
 const { getUserModel } = require('./models/user');
 const { updateProgressArray, updateStatistics, updateArrayItem, deleteArrayItem } = require('./db/progress');
 
