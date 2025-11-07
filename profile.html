@@ -311,41 +311,60 @@
       
       // Reload dari localStorage untuk memastikan data terbaru
       progressManager.progress = progressManager.loadProgress();
-      progressManager.statistics = progressManager.loadStatistics();
-      
-      const stats = progressManager.statistics;
       const progress = progressManager.progress;
       
-      console.log('📊 Loading statistics:', { stats, progress });
+      console.log('📊 Loading statistics from progress data:', progress);
       
-      // Update statistics cards
+      // ✅ Hitung statistik langsung dari data progress
+      const quizScores = progress.quizScores || [];
+      const assignments = progress.assignments || [];
+      const journals = progress.journalEntries || [];
+      
+      // ✅ Hitung rata-rata dari percentage (bukan raw score)
+      let averageQuizScore = 0;
+      if (quizScores.length > 0) {
+        const totalPercentage = quizScores.reduce((sum, quiz) => {
+          // Gunakan percentage jika ada, atau hitung dari score/maxScore
+          if (quiz.percentage !== undefined) {
+            return sum + quiz.percentage;
+          } else if (quiz.score !== undefined && quiz.maxScore !== undefined) {
+            return sum + ((quiz.score / quiz.maxScore) * 100);
+          } else if (quiz.score !== undefined && quiz.answers?.length) {
+            // Fallback: hitung dari jumlah jawaban
+            return sum + ((quiz.score / quiz.answers.length) * 100);
+          }
+          return sum;
+        }, 0);
+        averageQuizScore = Math.round(totalPercentage / quizScores.length);
+      }
+      
+      console.log('📊 Calculated Statistics:', {
+        totalQuiz: quizScores.length,
+        averageQuizScore: averageQuizScore + '%',
+        totalAssignments: assignments.length,
+        totalJournals: journals.length
+      });
+      
+      // ✅ Update UI dengan data yang dihitung
       const totalQuizElement = document.getElementById('total-quiz');
       const avgScoreElement = document.getElementById('average-score');
       const totalAssignmentsElement = document.getElementById('total-assignments');
       const totalJournalsElement = document.getElementById('total-journals');
       
       if (totalQuizElement) {
-        const totalQuiz = progress.quizScores?.length || 0;
-        totalQuizElement.textContent = totalQuiz;
-        console.log('📝 Total Quiz:', totalQuiz);
+        totalQuizElement.textContent = quizScores.length;
       }
       
       if (avgScoreElement) {
-        const avgScore = stats.averageQuizScore || progressManager.calculateAverageScore();
-        avgScoreElement.textContent = avgScore + '%';
-        console.log('📈 Average Score:', avgScore);
+        avgScoreElement.textContent = averageQuizScore + '%';
       }
       
       if (totalAssignmentsElement) {
-        const totalAssignments = progress.assignments?.length || 0;
-        totalAssignmentsElement.textContent = totalAssignments;
-        console.log('📋 Total Assignments:', totalAssignments);
+        totalAssignmentsElement.textContent = assignments.length;
       }
       
       if (totalJournalsElement) {
-        const totalJournals = progress.journalEntries?.length || 0;
-        totalJournalsElement.textContent = totalJournals;
-        console.log('📓 Total Journals:', totalJournals);
+        totalJournalsElement.textContent = journals.length;
       }
     }
     
@@ -366,14 +385,19 @@
         return;
       }
       
-      // Sort by date (newest first)
-      const sorted = [...quizScores].sort((a, b) => new Date(b.date) - new Date(a.date));
+      // ✅ Sort by completedAt (newest first)
+      const sorted = [...quizScores].sort((a, b) => {
+        const dateA = new Date(a.completedAt || a.date);
+        const dateB = new Date(b.completedAt || b.date);
+        return dateB - dateA;
+      });
       
-      console.log('✅ Displaying', sorted.length, 'quiz results');
+      console.log(' Displaying', sorted.length, 'quiz results');
       
       // Display quiz history
       quizList.innerHTML = sorted.map((quiz, index) => {
-        const date = new Date(quiz.date);
+        //  Gunakan completedAt atau date
+        const date = new Date(quiz.completedAt || quiz.date);
         const dateStr = date.toLocaleDateString('id-ID', {
           day: 'numeric',
           month: 'long',
@@ -382,7 +406,21 @@
           minute: '2-digit'
         });
         
-        const percentage = quiz.percentage || Math.round((quiz.score / quiz.maxScore) * 100);
+        // ✅ Hitung percentage dengan benar
+        let percentage = 0;
+        let maxScore = 20; // Default max score
+        
+        if (quiz.percentage !== undefined) {
+          percentage = quiz.percentage;
+        } else if (quiz.maxScore && quiz.score !== undefined) {
+          percentage = Math.round((quiz.score / quiz.maxScore) * 100);
+          maxScore = quiz.maxScore;
+        } else if (quiz.answers?.length && quiz.score !== undefined) {
+          // Fallback: gunakan jumlah answers sebagai maxScore
+          percentage = Math.round((quiz.score / quiz.answers.length) * 100);
+          maxScore = quiz.answers.length;
+        }
+        
         const scoreColor = percentage >= 80 ? '#10b981' : percentage >= 60 ? '#f59e0b' : '#ef4444';
         
         return `
@@ -394,7 +432,7 @@
               </div>
               <div style="text-align: right;">
                 <div style="font-size: 1.5em; font-weight: 700; color: ${scoreColor};">
-                  ${quiz.score}/${quiz.maxScore}
+                  ${quiz.score || 0}/${maxScore}
                 </div>
                 <div style="color: ${scoreColor}; font-weight: 600;">
                   ${percentage}%
