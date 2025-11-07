@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Login ke Virtual Lab Agama Kristen" />
+  <meta name="theme-color" content="#0ea5a6" />
+  <title>Login - Virtual Lab Kristen</title>
+  <link rel="icon" type="image/png" href="png/icon salib.png" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="js/auth.js"></script>
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="index.html"><img class="nav-icon" src="png/icon salib.png" alt="Home">Home</a>
+      <a href="login.html" class="active">Login</a>
+    </nav>
+  </header>
+
+  <main class="container" role="main">
+    <div class="login-container">
+      <div class="login-header">
+        <img src="png/icon salib.png" alt="Virtual Lab" class="login-logo">
+        <h1>Virtual Lab Agama Kristen</h1>
+        <p class="login-subtitle">Masuk ke akun Anda</p>
+      </div>
+
+      <!-- Login Form -->
+      <div id="login-form" class="auth-form-container">
+        <h2>Login</h2>
+        <form id="login-submit-form">
+          <div class="form-group">
+            <label for="login-email">Email</label>
+            <input type="email" id="login-email" required placeholder="Masukkan email Anda">
+          </div>
+          
+          <div class="form-group">
+            <label for="login-password">Password</label>
+            <input type="password" id="login-password" required placeholder="Masukkan password Anda">
+          </div>
+          
+          <button type="submit" class="login-btn">Masuk</button>
+        </form>
+        
+        <div class="auth-switch">
+          <p>Belum punya akun? <a href="#" id="show-register-link">Daftar di sini</a></p>
+        </div>
+      </div>
+
+      <!-- Register Form -->
+      <div id="register-form" class="auth-form-container" style="display: none;">
+        <h2>Daftar</h2>
+        <form id="register-submit-form">
+          <div class="form-group">
+            <label for="register-name">Nama Lengkap</label>
+            <input type="text" id="register-name" required placeholder="Masukkan nama lengkap">
+          </div>
+          
+          <div class="form-group">
+            <label for="register-email">Email</label>
+            <input type="email" id="register-email" required placeholder="Masukkan email Anda">
+          </div>
+          
+          <div class="form-group">
+            <label for="register-password">Password</label>
+            <input type="password" id="register-password" required minlength="6" placeholder="Minimal 6 karakter">
+          </div>
+          
+          <div class="form-group">
+            <label for="register-nim">NIM</label>
+            <input type="text" id="register-nim" required pattern="[0-9]{10}" title="NIM harus 10 digit angka" placeholder="10 digit NIM">
+          </div>
+          
+          <div class="form-group">
+            <label for="register-kelas">Kelas</label>
+            <select id="register-kelas" required>
+              <option value="">Pilih Kelas</option>
+              <option value="K1">K1</option>
+              <option value="K2">K2</option>
+              <option value="K3">K3</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="register-gender">Gender</label>
+            <select id="register-gender" required>
+              <option value="">Pilih Gender</option>
+              <option value="male">Laki-laki</option>
+              <option value="female">Perempuan</option>
+            </select>
+          </div>
+          
+          <button type="submit" class="register-btn">Daftar</button>
+        </form>
+        
+        <div class="auth-switch">
+          <p>Sudah punya akun? <a href="#" id="show-login-link">Login di sini</a></p>
+        </div>
+      </div>
+
+      <!-- Status Message -->
+      <div id="auth-status" class="auth-status"></div>
+      
+      <!-- Offline Mode Indicator -->
+      <div id="offline-indicator" class="offline-indicator" style="display: none;">
+        <p>📡 Mode Offline - Data disimpan lokal</p>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p class="muted">© 2025 Virtual Lab Agama Kristen</p>
+    </div>
+  </footer>
+
+  <script>
+    // Initialize login page functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      const loginForm = document.getElementById('login-submit-form');
+      const registerForm = document.getElementById('register-submit-form');
+      const showRegisterLink = document.getElementById('show-register-link');
+      const showLoginLink = document.getElementById('show-login-link');
+      const loginFormDiv = document.getElementById('login-form');
+      const registerFormDiv = document.getElementById('register-form');
+      const statusDiv = document.getElementById('auth-status');
+
+      // Show register form
+      showRegisterLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        loginFormDiv.style.display = 'none';
+        registerFormDiv.style.display = 'block';
+        statusDiv.textContent = '';
+      });
+
+      // Show login form
+      showLoginLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        registerFormDiv.style.display = 'none';
+        loginFormDiv.style.display = 'block';
+        statusDiv.textContent = '';
+      });
+
+      // Handle login form submission
+      loginForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+
+        if (!email || !password) {
+          showStatus('Email dan password harus diisi', 'error');
+          return;
+        }
+
+        try {
+          showStatus('Sedang login...', 'loading');
+          
+          await authManager.login(email, password);
+          
+          showStatus('Login berhasil! Mengalihkan...', 'success');
+          
+          // Redirect to home page
+          setTimeout(() => {
+            window.location.href = 'index.html';
+          }, 1500);
+          
+        } catch (error) {
+          showStatus(error.message, 'error');
+        }
+      });
+
+      // Handle register form submission
+      registerForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const userData = {
+          name: document.getElementById('register-name').value,
+          email: document.getElementById('register-email').value,
+          password: document.getElementById('register-password').value,
+          nim: document.getElementById('register-nim').value,
+          kelas: document.getElementById('register-kelas').value,
+          gender: document.getElementById('register-gender').value
+        };
+
+        // Validate required fields
+        if (!userData.name || !userData.email || !userData.password || 
+            !userData.nim || !userData.kelas || !userData.gender) {
+          showStatus('Semua field harus diisi', 'error');
+          return;
+        }
+
+        if (userData.password.length < 6) {
+          showStatus('Password minimal 6 karakter', 'error');
+          return;
+        }
+
+        if (userData.nim.length !== 10 || !/^\d{10}$/.test(userData.nim)) {
+          showStatus('NIM harus berupa 10 digit angka', 'error');
+          return;
+        }
+
+        try {
+          showStatus('Sedang mendaftar...', 'loading');
+          
+          await authManager.register(userData);
+          
+          showStatus('Registrasi berhasil! Mengalihkan...', 'success');
+          
+          // Redirect to profile page to complete profile
+          setTimeout(() => {
+            window.location.href = 'profile.html';
+          }, 1500);
+          
+        } catch (error) {
+          showStatus(error.message, 'error');
+        }
+      });
+
+      // Show status message
+      function showStatus(message, type) {
+        statusDiv.textContent = message;
+        statusDiv.className = `auth-status auth-status-${type}`;
+        
+        // Show offline indicator if message contains "offline" or "mode offline"
+        const offlineIndicator = document.getElementById('offline-indicator');
+        if (message.includes('offline') || message.includes('mode offline')) {
+          offlineIndicator.style.display = 'block';
+        } else {
+          offlineIndicator.style.display = 'none';
+        }
+        
+        // Auto hide after 5 seconds for success/error
+        if (type === 'success' || type === 'error') {
+          setTimeout(() => {
+            statusDiv.textContent = '';
+            statusDiv.className = 'auth-status';
+          }, 5000);
+        }
+      }
+
+      // Check if user is already logged in
+      if (authManager.isAuthenticated()) {
+        showStatus('Anda sudah login. Mengalihkan...', 'success');
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 1500);
+      }
+    });
+  </script>
+</body>
+</html>
