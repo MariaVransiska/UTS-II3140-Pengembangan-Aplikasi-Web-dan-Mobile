@@ -277,17 +277,25 @@
         if (result.success) {
           statusDiv.innerHTML = '<p style="color: green;">✅ Profil berhasil disimpan!</p>';
           
-          // Reload profile
+          // ✅ Sync data terbaru dari backend dulu
+          await syncDataFromBackend();
+          
+          // ✅ Reload profile dengan data terbaru
           const userData = authManager.getCurrentUser();
           loadUserProfile(userData);
           
-          // Update avatar
+          // ✅ Update avatar berdasarkan gender baru
           const avatar = document.getElementById('user-avatar');
           if (gender === 'Perempuan') {
             avatar.src = 'png/icon profile cewe.png';
           } else {
             avatar.src = 'png/icon profile cowo.png';
           }
+          
+          // ✅ Clear status message setelah 3 detik
+          setTimeout(() => {
+            statusDiv.innerHTML = '';
+          }, 3000);
         } else {
           statusDiv.innerHTML = `<p style="color: red;">❌ ${result.message || 'Gagal menyimpan profil'}</p>`;
         }
