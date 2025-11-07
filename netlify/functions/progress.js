@@ -128,11 +128,19 @@ exports.handler = async (event, context) => {
 
 async function handleSaveQuizResults(data, event) {
   const userId = authenticateToken(event);
-  const { quizId, score, answers, completedAt } = data;
+  const { quizId, score, maxScore, answers, completedAt } = data;
+  
+  // Default maxScore to 20 if not provided
+  const totalQuestions = maxScore || 20;
+  
+  // Calculate percentage
+  const percentage = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
   
   const quizResult = {
     quizId: quizId || 'main-quiz',
     score,
+    maxScore: totalQuestions,
+    percentage,
     answers: answers || [],
     completedAt: completedAt ? new Date(completedAt) : new Date()
   };
@@ -155,13 +163,22 @@ async function handleSaveQuizResults(data, event) {
   }
   
   const quizScores = user.progress.quizScores || [];
-  const totalScore = quizScores.reduce((sum, quiz) => sum + (quiz.score || 0), 0);
-  const averageScore = quizScores.length > 0 ? totalScore / quizScores.length : 0;
   
-  await updateStatistics(userId, {
+  // ✅ Calculate average based on PERCENTAGE, not raw score
+  const totalPercentage = quizScores.reduce((sum, quiz) => {
+    const quizPercentage = quiz.percentage || 
+      (quiz.maxScore ? Math.round((quiz.score / quiz.maxScore) * 100) : 0);
+    return sum + quizPercentage;
+  }, 0);
+  
+  const averageScore = quizScores.length > 0 ? Math.round(totalPercentage / quizScores.length) : 0;
+  
+  const updatedStatistics = {
     totalQuizAttempts: quizScores.length,
     averageQuizScore: averageScore
-  });
+  };
+  
+  await updateStatistics(userId, updatedStatistics);
   
   return {
     statusCode: 201,
@@ -172,7 +189,13 @@ async function handleSaveQuizResults(data, event) {
     body: JSON.stringify({
       success: true,
       message: 'Hasil quiz berhasil disimpan',
-      data: { quizResult }
+      data: { 
+        quizResult,
+        statistics: updatedStatistics,
+        progress: {
+          quizScores: quizScores
+        }
+      }
     })
   };
 }

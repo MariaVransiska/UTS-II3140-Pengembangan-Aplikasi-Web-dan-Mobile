@@ -74,12 +74,22 @@ class ProgressManager {
       const data = await response.json();
       
       if (data.success && data.data) {
-        // Update progress dari backend response
-        this.progress.quizScores.push(data.data.quizScore);
-        this.statistics = data.data.statistics || this.statistics;
+        // ✅ Update progress dengan data dari backend
+        if (data.data.quizResult) {
+          this.progress.quizScores = this.progress.quizScores || [];
+          this.progress.quizScores.push(data.data.quizResult);
+        }
         
+        // ✅ Update statistics dari backend
+        if (data.data.statistics) {
+          this.statistics = data.data.statistics;
+        }
+        
+        // ✅ Save to localStorage
         localStorage.setItem('userProgress', JSON.stringify(this.progress));
         localStorage.setItem('userStatistics', JSON.stringify(this.statistics));
+        
+        console.log('✅ Quiz saved to backend:', data.data);
         
         this.updateUI();
         return data;
@@ -329,7 +339,8 @@ class ProgressManager {
     }
     
     if (avgScore) {
-      avgScore.textContent = this.statistics.averageQuizScore || this.calculateAverageScore();
+      const average = this.statistics.averageQuizScore || this.calculateAverageScore();
+      avgScore.textContent = average + '%';  // ✅ Add % sign
     }
     
     if (totalAssignments) {
@@ -352,19 +363,40 @@ class ProgressManager {
       return;
     }
     
-    quizList.innerHTML = quizScores.map((quiz, index) => `
-      <div class="quiz-item card mb-2 p-3">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h6 class="mb-1">Quiz #${index + 1}</h6>
-            <p class="mb-0"><strong>Skor:</strong> ${quiz.score}/${quiz.maxScore} (${quiz.percentage}%)</p>
-          </div>
-          <div class="text-end">
-            <small class="text-muted">${new Date(quiz.date).toLocaleString('id-ID')}</small>
+    // Sort by date, newest first
+    const sorted = [...quizScores].sort((a, b) => {
+      const dateA = new Date(a.completedAt || a.date);
+      const dateB = new Date(b.completedAt || b.date);
+      return dateB - dateA;
+    });
+    
+    quizList.innerHTML = sorted.map((quiz, index) => {
+      const score = quiz.score || 0;
+      const maxScore = quiz.maxScore || 20;
+      const percentage = quiz.percentage || Math.round((score / maxScore) * 100);
+      const scoreColor = percentage >= 80 ? '#10b981' : percentage >= 60 ? '#f59e0b' : '#ef4444';
+      const date = new Date(quiz.completedAt || quiz.date);
+      
+      return `
+        <div class="quiz-item card mb-2 p-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h6 class="mb-1">Quiz #${sorted.length - index}</h6>
+              <p class="mb-0"><strong>Skor:</strong> ${score}/${maxScore} <span style="color: ${scoreColor}; font-weight: 600;">(${percentage}%)</span></p>
+            </div>
+            <div class="text-end">
+              <small class="text-muted">${date.toLocaleDateString('id-ID', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}</small>
+            </div>
           </div>
         </div>
-      </div>
-    `).reverse().join('');
+      `;
+    }).join('');
   }
 }
 
