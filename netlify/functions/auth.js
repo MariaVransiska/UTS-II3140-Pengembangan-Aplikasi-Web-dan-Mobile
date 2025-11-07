@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
-const { connectToDatabase } = require('../../db/index');
-const { getUserModel } = require('../../models/user');
+const { connectToDatabase } = require('./db/index');
+const { getUserModel } = require('./models/user');
 
 exports.handler = async (event, context) => {
   // Connect to Supabase

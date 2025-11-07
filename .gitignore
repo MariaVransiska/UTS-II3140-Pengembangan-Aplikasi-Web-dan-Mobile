@@ -8,7 +8,8 @@ node_modules/
 
 # Netlify
 .netlify/
-netlify/
+netlify/*
+!netlify/functions/
 
 # OS Files
 .DS_Store
