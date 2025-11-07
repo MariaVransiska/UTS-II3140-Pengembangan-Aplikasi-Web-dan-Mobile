@@ -239,6 +239,66 @@ class AuthManager {
       throw error;
     }
   }
+  
+  // Return current user (from memory or localStorage)
+  getCurrentUser() {
+    if (this.user) return this.user;
+    const userData = localStorage.getItem('userData');
+    if (userData) {
+      try {
+        this.user = JSON.parse(userData);
+        return this.user;
+      } catch (e) {
+        console.error('Error parsing userData in getCurrentUser:', e);
+      }
+    }
+    return null;
+  }
+
+  // Update profile on backend and sync local state
+  async updateProfile(profileData) {
+    try {
+      const response = await this.apiRequest('/auth/profile', {
+        method: 'PUT',
+        body: JSON.stringify(profileData)
+      });
+
+      if (response && response.success) {
+        // Backend returns updated user in response.data.user
+        const updatedUser = (response.data && response.data.user) ? response.data.user : null;
+        if (updatedUser) {
+          this.user = updatedUser;
+          localStorage.setItem('userData', JSON.stringify(this.user));
+
+          // If backend also returned progress/statistics, sync them
+          if (updatedUser.progress) {
+            localStorage.setItem('userProgress', JSON.stringify(updatedUser.progress));
+            if (window.progressManager) {
+              window.progressManager.progress = window.progressManager.loadProgress();
+              window.progressManager.updateUI();
+            }
+          }
+          if (updatedUser.statistics) {
+            localStorage.setItem('userStatistics', JSON.stringify(updatedUser.statistics));
+            if (window.progressManager) {
+              window.progressManager.statistics = window.progressManager.loadStatistics();
+              window.progressManager.updateUI();
+            }
+          }
+
+          this.updateUI();
+          window.dispatchEvent(new CustomEvent('profileUpdated', { detail: { user: this.user } }));
+        }
+
+        return response;
+      }
+
+      return { success: false, message: response?.message || 'Gagal update profil' };
+    } catch (error) {
+      console.error('Update profile error:', error);
+      return { success: false, message: error.message || 'Terjadi kesalahan saat update profil' };
+    }
+  }
 
   logout() {
     this.token = null;
