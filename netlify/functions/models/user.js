@@ -97,6 +97,10 @@ class UserModel {
       updates[key] = updateData[key];
     });
 
+    console.log(' UserModel.findByIdAndUpdate called');
+    console.log('   User ID:', id);
+    console.log('   Updates:', updates);
+
     const { data, error } = await this.supabase
       .from('users')
       .update(updates)
@@ -104,7 +108,12 @@ class UserModel {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Supabase update error:', error);
+      throw error;
+    }
+    
+    console.log('✅ Supabase update success:', data);
     return data ? this.formatUser(data) : null;
   }
 

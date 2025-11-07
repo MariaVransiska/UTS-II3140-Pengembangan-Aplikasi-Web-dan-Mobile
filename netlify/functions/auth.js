@@ -323,11 +323,26 @@ async function handleUpdateProfile(data, event) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const User = await getUserModel();
+    
+    // ✅ Convert camelCase to snake_case for Supabase
+    const updateData = {
+      name: data.name,
+      gender: data.gender,
+      nim: data.nim,
+      kelas: data.kelas,
+      updated_at: new Date().toISOString() // ✅ Use snake_case
+    };
+    
+    console.log('🔄 Updating profile for user:', decoded.id);
+    console.log('📝 Update data:', updateData);
+    
     const user = await User.findByIdAndUpdate(
       decoded.id,
-      { ...data, updatedAt: new Date() },
+      updateData,
       { new: true }
     );
+    
+    console.log('✅ User updated:', user);
     
     if (!user) {
       return {
@@ -356,6 +371,7 @@ async function handleUpdateProfile(data, event) {
       })
     };
   } catch (error) {
+    console.error('❌ Error updating profile:', error);
     return {
       statusCode: 400,
       headers: {
